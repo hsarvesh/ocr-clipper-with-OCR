@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cross-Origin-Opener-Policy" content="same-origin-allow-popups">
+    <title>Test Credits - OCR System</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    
+    <!-- Initialize Firebase -->
+    <script>
+        // Your Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDvzTwvplVpI-YLjVZiweZmGfvhA06M8fA",
+            authDomain: "maze-tatva.firebaseapp.com",
+            databaseURL: "https://maze-tatva.firebaseio.com",
+            projectId: "maze-tatva",
+            storageBucket: "maze-tatva.firebasestorage.app",
+            messagingSenderId: "194427087525",
+            appId: "1:194427087525:web:bc612ee544c5d3ccf4bb4c"
+        };
+
+        // Initialize Firebase
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const auth = firebase.auth();
+        
+        // Set persistence to LOCAL
+        auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
+            .catch((error) => {
+                console.error("Auth persistence error:", error);
+            });
+
+        // Check authentication state
+        auth.onAuthStateChanged((user) => {
+            if (!user) {
+                window.location.href = 'index.html';
+            }
+        });
+    </script>
+    
+    <link rel="stylesheet" href="src/css/styles.css">
+    <script src="credits.js"></script>
+    <script src="auth.js"></script>
+    <script src="common-styles.js"></script>
+</head>
+<body>
+    <header class="header">
+        <div class="header-left">
+            <a href="index.html" class="back-button">
+                <span class="material-icons">arrow_back</span>
+                Back to Home
+            </a>
+            <h1 class="page-title">Test Credits</h1>
+        </div>
+        <div class="header-right">
+            <div class="user-profile">
+                <button id="user-name" class="profile-button" onclick="toggleProfileMenu(event)">
+                    <img id="user-photo" class="user-photo" src="" alt="Profile photo">
+                    <span id="user-display-name"></span>
+                    <span class="material-icons">arrow_drop_down</span>
+                </button>
+                <div id="profile-menu" class="profile-menu">
+                    <div class="profile-header">
+                        <div class="profile-name" id="profile-full-name"></div>
+                        <div class="profile-email" id="profile-email"></div>
+                    </div>
+                    <div class="credits-section">
+                        <div class="credits-info">
+                            <span class="credits-icon">💎</span>
+                            <span class="credits-amount-lg" id="menu-credits-amount">-</span>
+                            <span class="credits-label">Credits Available</span>
+                        </div>
+                        <div class="credits-actions">
+                            <a href="test-credits.html" class="menu-item-button">
+                                <span class="material-icons">add_circle</span>
+                                Add Credits
+                            </a>
+                            <a href="test-credits.html" class="menu-item-button">
+                                <span class="material-icons">manage_accounts</span>
+                                Manage Credits
+                            </a>
+                        </div>
+                    </div>
+                    <div class="profile-divider"></div>
+                    <div class="profile-info">
+                        <div class="menu-item button-like" onclick="window.location.href='processing-history.html'">
+                            <span class="material-icons">history</span>
+                            <span>Processing History</span>
+                        </div>
+                        <div class="menu-item" onclick="signOut()">
+                            <span class="material-icons">logout</span>
+                            <span>Sign Out</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="test-container">
+        <div id="current-credits" class="current-credits">
+            Loading credits...
+        </div>
+
+        <div class="credit-packages">
+            <div class="package-card" data-credits="10">
+                <div class="package-credits">10</div>
+                <div class="package-label">Test Credits</div>
+            </div>
+            <div class="package-card" data-credits="50">
+                <div class="package-credits">50</div>
+                <div class="package-label">Test Credits</div>
+            </div>
+            <div class="package-card" data-credits="100">
+                <div class="package-credits">100</div>
+                <div class="package-label">Test Credits</div>
+            </div>
+        </div>
+
+        <button id="add-credits-btn" class="add-credits-btn" disabled>
+            Select amount to add
+        </button>
+
+        <div class="use-credits-section">
+            <h2>Test Credit Usage</h2>
+            <div class="credits-input-group">
+                <div class="credits-input-wrapper">
+                    <label for="use-credits-input" class="credits-label">Number of credits to use</label>
+                    <input type="number" 
+                           id="use-credits-input" 
+                           class="credits-input"
+                           min="1" 
+                           value="1"
+                           placeholder="Enter number of credits"
+                           title="Enter the number of credits you want to use">
+                </div>
+                <button onclick="useTestCredits()" class="add-credits-btn use-credits-btn">
+                    Use Credits
+                </button>
+            </div>
+        </div>
+
+        <div id="message" class="message"></div>
+
+        <!-- Transaction History Section -->
+        <div class="transaction-history">
+            <h2>Transaction History</h2>
+            <div id="transaction-list" class="transaction-list">
+                <!-- Transactions will be loaded here -->
+                <div class="loading-transactions">Loading transaction history...</div>
+            </div>
+        </div>
+    </main>
+
+    <script type="text/javascript">
+        let selectedAmount = null;
+        let creditsManager = null;
+
+        // Helper function to format date
+        function formatDate(timestamp) {
+            const date = timestamp instanceof Date ? timestamp : timestamp.toDate();
+            return new Intl.DateTimeFormat('default', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            }).format(date);
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            auth.onAuthStateChanged(async (user) => {
+                if (user) {
+                    try {
+                        // Update profile information
+                        document.getElementById('user-display-name').textContent = user.displayName || user.email;
+                        document.getElementById('profile-full-name').textContent = user.displayName || 'No name set';
+                        document.getElementById('profile-email').textContent = user.email;
+                        
+                        if (user.photoURL) {
+                            document.getElementById('user-photo').src = user.photoURL;
+                        } else {
+                            document.getElementById('user-photo').src = 'https://www.gravatar.com/avatar/?d=mp';
+                        }
+                        
+                        creditsManager = new CreditsManager(user.uid);
+                        await Promise.all([
+                            updateCreditsDisplay(),
+                            loadTransactionHistory()
+                        ]);
+                    } catch (error) {
+                        console.error('Error initializing credits:', error);
+                        showMessage('Error loading credits. Please refresh the page.', 'error');
+                    }
+                } else {
+                    window.location.href = 'index.html';
+                }
+            });
+        });
+
+        // Handle package selection
+        document.querySelectorAll('.package-card').forEach(card => {
+            card.addEventListener('click', () => {
+                document.querySelectorAll('.package-card').forEach(c => 
+                    c.classList.remove('selected'));
+                
+                card.classList.add('selected');
+                selectedAmount = parseInt(card.dataset.credits);
+
+                const button = document.getElementById('add-credits-btn');
+                button.textContent = `Add ${selectedAmount} Test Credits`;
+                button.disabled = false;
+            });
+        });
+
+        // Add credits button
+        document.getElementById('add-credits-btn').addEventListener('click', async () => {
+            if (!selectedAmount || !creditsManager) return;
+
+            const button = document.getElementById('add-credits-btn');
+            const originalText = button.textContent;
+            button.disabled = true;
+            button.textContent = 'Adding credits...';
+
+            try {
+                await creditsManager.addTestCredits(selectedAmount);
+                await Promise.all([
+                    updateCreditsDisplay(),
+                    loadTransactionHistory()
+                ]);
+                showMessage(`Successfully added ${selectedAmount} test credits!`, 'success');
+                
+                // Reset selection
+                document.querySelectorAll('.package-card').forEach(c => 
+                    c.classList.remove('selected'));
+                selectedAmount = null;
+                button.textContent = 'Select amount to add';
+            } catch (error) {
+                console.error('Error adding credits:', error);
+                showMessage(error.message || 'Failed to add credits. Please try again.', 'error');
+                button.textContent = originalText;
+            } finally {
+                button.disabled = false;
+            }
+        });
+
+        // Use credits function
+        async function useTestCredits() {
+            const inputElement = document.getElementById('use-credits-input');
+            const amount = parseInt(inputElement.value);
+            if (!amount || isNaN(amount) || amount <= 0) {
+                showMessage('Please enter a valid number of credits to use', 'error');
+                return;
+            }
+            if (!creditsManager) {
+                showMessage('Please wait for the system to initialize', 'error');
+                return;
+            }
+
+            const useButton = document.querySelector('.use-credits-btn');
+            const originalText = useButton.textContent;
+            useButton.disabled = true;
+            useButton.textContent = 'Using credits...';
+
+            try {
+                await creditsManager.useCredits(amount, 'Test credit usage');
+                await Promise.all([
+                    updateCreditsDisplay(),
+                    loadTransactionHistory()
+                ]);
+                showMessage(`Successfully used ${amount} credits!`, 'success');
+                inputElement.value = '1'; // Reset to default value
+            } catch (error) {
+                console.error('Error using credits:', error);
+                showMessage(error.message || 'Failed to use credits. Please try again.', 'error');
+            } finally {
+                useButton.disabled = false;
+                useButton.textContent = originalText;
+            }
+        }
+
+        // Update credits display
+        async function updateCreditsDisplay() {
+            const credits = await creditsManager.getCredits();
+            document.getElementById('current-credits').innerHTML = `
+                Current Credits: <span class="credits-value">${credits}</span>
+            `;
+            document.getElementById('menu-credits-amount').textContent = credits;
+        }
+
+        // Load and display transaction history
+        async function loadTransactionHistory() {
+            const transactionList = document.getElementById('transaction-list');
+            transactionList.innerHTML = '<div class="transaction-item">Loading transaction history...</div>';
+            
+            try {
+                const transactions = await creditsManager.getTransactionHistory();
+                
+                if (transactions.length === 0) {
+                    transactionList.innerHTML = `
+                        <div class="transaction-item">
+                            <div class="transaction-details">
+                                <div class="transaction-type">No transactions yet</div>
+                                <div class="transaction-info">Start by adding some credits!</div>
+                            </div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                transactionList.innerHTML = transactions.map(transaction => `
+                    <div class="transaction-item">
+                        <div class="transaction-icon ${transaction.type === 'usage' ? 'usage' : 'addition'}">
+                            <span class="material-icons">
+                                ${transaction.type === 'usage' ? 'remove_circle' : 'add_circle'}
+                            </span>
+                        </div>
+                        <div class="transaction-details">
+                            <div class="transaction-type">
+                                ${transaction.type === 'usage' ? 'Credits Used' : 'Credits Added'}
+                            </div>
+                            <div class="transaction-info">
+                                <span>${transaction.description || 'No description'}</span>
+                                <span>•</span>
+                                <span>${formatDate(transaction.timestamp)}</span>
+                            </div>
+                        </div>
+                        <div class="transaction-amount ${transaction.type === 'usage' ? 'usage' : 'addition'}">
+                            ${transaction.type === 'usage' ? '-' : '+'}${transaction.credits}
+                        </div>
+                    </div>
+                `).join('');
+
+            } catch (error) {
+                console.error('Error loading transactions:', error);
+                transactionList.innerHTML = `
+                    <div class="transaction-item">
+                        <div class="transaction-details">
+                            <div class="transaction-type">Error loading transactions</div>
+                            <div class="transaction-info">Please try refreshing the page</div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        // Show message function
+        function showMessage(text, type) {
+            const messageEl = document.getElementById('message');
+            messageEl.textContent = text;
+            messageEl.className = `message ${type} show`;
+            
+            setTimeout(() => {
+                messageEl.className = 'message';
+            }, 5000);
+        }
+    </script>
+</body>
+</html>

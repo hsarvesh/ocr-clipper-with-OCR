@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cross-Origin-Opener-Policy" content="same-origin-allow-popups">
+    <title>Processing History - OCR System</title>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+    <link rel="stylesheet" href="src/css/styles.css">
+
+    <script src="src/js/auth.js"></script>
+    <script src="src/js/credits.js"></script>
+
+    <style>
+        /* Pagination Styles */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 2rem;
+            padding: 1rem;
+        }
+
+        .pagination-button {
+            padding: 0.5rem 1rem;
+            background-color: white;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            color: var(--text);
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+
+        .pagination-button:hover:not(:disabled) {
+            background-color: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        .pagination-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .pagination-button.active {
+            background-color: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        .pagination-info {
+            color: #64748b;
+            font-size: 0.875rem;
+            margin: 0 1rem;
+        }
+    </style>
+</head>
+
+<body>
+    <header class="header">
+        <div class="header-left">
+            <a href="index.html" class="back-button"
+                style="text-decoration: none; display: flex; align-items: center; gap: 0.5rem;">
+                <span class="material-icons">arrow_back</span>
+                Back to Home
+            </a>
+            <h1 class="page-title" style="margin-bottom: 0; margin-left: 1rem;">Processing History</h1>
+        </div>
+        <div class="header-right">
+            <div class="user-profile">
+                <button id="user-name" class="profile-button" onclick="toggleProfileMenu(event)">
+                    <img id="user-photo" class="user-photo" src="" alt="Profile photo">
+                    <span id="user-display-name"></span>
+                    <span class="material-icons">arrow_drop_down</span>
+                </button>
+                <div id="profile-menu" class="profile-menu">
+                    <div class="profile-header">
+                        <div class="profile-name" id="profile-full-name"></div>
+                        <div class="profile-email" id="profile-email"></div>
+                    </div>
+                    <div class="credits-section">
+                        <div class="credits-info">
+                            <span class="credits-icon">💎</span>
+                            <span class="credits-amount-lg" id="menu-credits-amount">-</span>
+                            <span class="credits-label">Credits Available</span>
+                        </div>
+                        <div class="credits-actions">
+                            <a href="test-credits.html" class="menu-item-button">
+                                <span class="material-icons">add_circle</span>
+                                Add Credits
+                            </a>
+                            <a href="test-credits.html" class="menu-item-button">
+                                <span class="material-icons">manage_accounts</span>
+                                Manage Credits
+                            </a>
+                        </div>
+                    </div>
+                    <div class="profile-divider"></div>
+                    <div class="profile-info">
+                        <div class="menu-item button-like" onclick="window.location.href='processing-history.html'">
+                            <span class="material-icons">history</span>
+                            <span>Processing History</span>
+                        </div>
+                        <div class="menu-item">
+                            <span class="material-icons">access_time</span>
+                            <span id="last-login"></span>
+                        </div>
+                    </div>
+                    <div class="profile-divider"></div>
+                    <div class="menu-item sign-out" onclick="signOut()">
+                        <span class="material-icons">logout</span>
+                        Sign Out
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-container">
+        <div id="history-list" class="history-list">
+            <div class="loading-history">Loading history...</div>
+        </div>
+
+        <div id="pagination-container" class="pagination" style="display: none;">
+            <button class="pagination-button" id="prev-page" onclick="changePage(-1)">
+                <span class="material-icons" style="font-size: 1rem;">chevron_left</span>
+                Previous
+            </button>
+            <div id="page-numbers"></div>
+            <span class="pagination-info" id="pagination-info"></span>
+            <button class="pagination-button" id="next-page" onclick="changePage(1)">
+                Next
+                <span class="material-icons" style="font-size: 1rem;">chevron_right</span>
+            </button>
+        </div>
+    </main>
+
+    <script>
+        // Pagination variables
+        let allProcessingHistory = [];
+        let currentPage = 1;
+        const itemsPerPage = 10;
+        let creditsManager = null;
+
+        // Initialize Firebase if not already done
+        if (!firebase.apps.length) {
+            const firebaseConfig = {
+                apiKey: "AIzaSyDvzTwvplVpI-YLjVZiweZmGfvhA06M8fA",
+                authDomain: "maze-tatva.firebaseapp.com",
+                databaseURL: "https://maze-tatva.firebaseio.com",
+                projectId: "maze-tatva",
+                storageBucket: "maze-tatva.firebasestorage.app",
+                messagingSenderId: "194427087525",
+                appId: "1:194427087525:web:bc612ee544c5d3ccf4bb4c"
+            };
+            firebase.initializeApp(firebaseConfig);
+        }
+
+        // Handle authentication state changes
+        firebase.auth().onAuthStateChanged(async (user) => {
+            if (!user) {
+                window.location.href = 'index.html';
+                return;
+            }
+
+            try {
+                // Update user info in the header menu
+                await updateUserInfo(user);
+
+                // Initialize credits manager
+                creditsManager = new CreditsManager(user.uid);
+
+                // Update credits display in the menu
+                await updateCreditsDisplay(creditsManager);
+
+                // Load processing history
+                await loadProcessingHistory(creditsManager);
+            } catch (error) {
+                console.error('Error initializing page:', error);
+                showError('Error loading history. Please refresh the page.');
+            }
+        });
+
+        async function updateUserInfo(user) {
+            if (!user) return;
+
+            const userPhoto = document.getElementById('user-photo');
+            const displayName = document.getElementById('user-display-name');
+            const profileFullName = document.getElementById('profile-full-name');
+            const profileEmail = document.getElementById('profile-email');
+            const lastLogin = document.getElementById('last-login');
+
+            if (user.photoURL) {
+                userPhoto.src = user.photoURL;
+            } else {
+                userPhoto.src = 'https://www.gravatar.com/avatar/?d=mp';
+            }
+
+            displayName.textContent = user.displayName || user.email;
+            profileFullName.textContent = user.displayName || '';
+            profileEmail.textContent = user.email || '';
+
+            if (user.metadata && user.metadata.lastSignInTime) {
+                lastLogin.textContent = `Last login: ${new Date(user.metadata.lastSignInTime).toLocaleDateString()}`;
+            }
+        }
+
+        async function updateCreditsDisplay(creditsManager) {
+            if (!creditsManager) return;
+
+            try {
+                const credits = await creditsManager.getCredits();
+                const menuCreditsDisplay = document.getElementById('menu-credits-amount');
+                if (menuCreditsDisplay) {
+                    menuCreditsDisplay.textContent = credits;
+                }
+            } catch (error) {
+                console.error('Error updating credits display:', error);
+            }
+        }
+
+        async function loadProcessingHistory(creditsManager) {
+            if (!creditsManager) {
+                showError('Error: Credits manager not initialized');
+                return;
+            }
+
+            const historyList = document.getElementById('history-list');
+            if (!historyList) {
+                console.error('History list element not found');
+                return;
+            }
+
+            historyList.innerHTML = '<div class="loading-history">Loading history...</div>';
+
+            try {
+                const transactions = await creditsManager.getTransactionHistory().catch(error => {
+                    console.error('Error fetching transaction history:', error);
+                    throw new Error('Failed to fetch transaction history');
+                });
+
+                if (!transactions || !Array.isArray(transactions)) {
+                    throw new Error('Invalid transaction data received');
+                }
+
+                // Filter for OCR processing transactions
+                const processingTransactions = transactions.filter(t => {
+                    if (!t || typeof t !== 'object') return false;
+                    if (t.type === 'usage') return true;
+                    if (t.description && typeof t.description === 'string') {
+                        const desc = t.description.toLowerCase();
+                        return desc.includes('processed') || desc.includes('ocr') || desc.includes('image');
+                    }
+                    return false;
+                });
+
+                if (processingTransactions.length === 0) {
+                    historyList.innerHTML = `
+                        <div class="empty-history">
+                            <span class="material-icons" style="font-size: 3rem; margin-bottom: 1rem;">history</span>
+                            <p>No processing history yet</p>
+                            <p style="margin-top: 0.5rem; font-size: 0.875rem;">
+                                Process some images to see your history here
+                            </p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                // Sort transactions by date (newest first)
+                processingTransactions.sort((a, b) => b.timestamp - a.timestamp);
+
+                allProcessingHistory = processingTransactions;
+
+                // Show pagination if there are more than itemsPerPage transactions
+                if (processingTransactions.length > itemsPerPage) {
+                    document.getElementById('pagination-container').style.display = 'flex';
+                }
+
+                renderPage();
+
+            } catch (error) {
+                console.error('Error loading history:', error);
+                historyList.innerHTML = `
+                    <div class="empty-history">
+                        <p>Error loading processing history</p>
+                        <p style="margin-top: 0.5rem; font-size: 0.875rem;">
+                            Please try refreshing the page
+                        </p>
+                    </div>
+                `;
+            }
+        }
+
+        function renderPage() {
+            const historyList = document.getElementById('history-list');
+            const totalPages = Math.ceil(allProcessingHistory.length / itemsPerPage);
+
+            // Calculate start and end indices
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const endIndex = Math.min(startIndex + itemsPerPage, allProcessingHistory.length);
+
+            // Get history items for current page
+            const pageHistory = allProcessingHistory.slice(startIndex, endIndex);
+
+            // Render history items
+            historyList.innerHTML = pageHistory.map(transaction => `
+                <div class="history-item">
+                    <div class="history-icon usage">
+                        <span class="material-icons">description</span>
+                    </div>
+                    <div class="history-details">
+                        <div class="history-type">Image Processing</div>
+                        <div class="history-info">
+                            <span>${transaction.description || 'Image Processing'}</span>
+                            <span>•</span>
+                            <span>${formatDate(transaction.timestamp)}</span>
+                        </div>
+                    </div>
+                    <div class="history-amount">-${transaction.credits}</div>
+                </div>
+            `).join('');
+
+            // Update pagination controls
+            updatePaginationControls(totalPages, startIndex, endIndex);
+        }
+
+        function updatePaginationControls(totalPages, startIndex, endIndex) {
+            // Update previous button
+            const prevButton = document.getElementById('prev-page');
+            prevButton.disabled = currentPage === 1;
+
+            // Update next button
+            const nextButton = document.getElementById('next-page');
+            nextButton.disabled = currentPage === totalPages;
+
+            // Update page numbers
+            const pageNumbersContainer = document.getElementById('page-numbers');
+            pageNumbersContainer.innerHTML = '';
+
+            // Show max 5 page numbers
+            let startPage = Math.max(1, currentPage - 2);
+            let endPage = Math.min(totalPages, startPage + 4);
+
+            // Adjust if we're near the end
+            if (endPage - startPage < 4) {
+                startPage = Math.max(1, endPage - 4);
+            }
+
+            for (let i = startPage; i <= endPage; i++) {
+                const pageButton = document.createElement('button');
+                pageButton.className = 'pagination-button' + (i === currentPage ? ' active' : '');
+                pageButton.textContent = i;
+                pageButton.onclick = () => goToPage(i);
+                pageNumbersContainer.appendChild(pageButton);
+            }
+
+            // Update info text
+            const paginationInfo = document.getElementById('pagination-info');
+            paginationInfo.textContent = `Showing ${startIndex + 1}-${endIndex} of ${allProcessingHistory.length}`;
+        }
+
+        function changePage(delta) {
+            const totalPages = Math.ceil(allProcessingHistory.length / itemsPerPage);
+            const newPage = currentPage + delta;
+
+            if (newPage >= 1 && newPage <= totalPages) {
+                currentPage = newPage;
+                renderPage();
+            }
+        }
+
+        function goToPage(page) {
+            currentPage = page;
+            renderPage();
+        }
+
+        function formatDate(timestamp) {
+            const date = timestamp instanceof Date ? timestamp : timestamp.toDate();
+            return new Intl.DateTimeFormat('default', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            }).format(date);
+        }
+
+        function showError(message) {
+            const historyList = document.getElementById('history-list');
+            historyList.innerHTML = `
+                <div class="empty-history">
+                    <p>${message}</p>
+                </div>
+            `;
+        }
+    </script>
+</body>
+
+</html>

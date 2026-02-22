@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cross-Origin-Opener-Policy" content="same-origin-allow-popups">
+    <title>Purchase Credits - OCR System</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script src="https://js.stripe.com/v3/"></script>
+
+    <link rel="stylesheet" href="src/css/styles.css">
+    <link rel="stylesheet" href="src/css/credits-styles.css">
+
+    <script src="src/js/auth.js" defer></script>
+    <script src="src/js/credits.js" defer></script>
+</head>
+
+<body>
+    <header class="header">
+        <div class="header-left">
+            <h1 class="page-title">Purchase Credits</h1>
+        </div>
+        <div class="header-right">
+            <div class="user-profile">
+                <button id="user-name" class="profile-button" onclick="toggleProfileMenu(event)">
+                    <img id="user-photo" class="user-photo" src="" alt="Profile photo">
+                    <span id="user-display-name"></span>
+                    <span class="material-icons">arrow_drop_down</span>
+                </button>
+                <div id="profile-menu" class="profile-menu">
+                    <div class="profile-header">
+                        <div class="profile-name" id="profile-full-name"></div>
+                        <div class="profile-email" id="profile-email"></div>
+                    </div>
+                    <div class="credits-section">
+                        <div class="credits-info">
+                            <span class="credits-icon">💎</span>
+                            <span class="credits-amount-lg" id="menu-credits-amount">-</span>
+                            <span class="credits-label">Credits Available</span>
+                        </div>
+                        <div class="credits-actions">
+                            <a href="test-credits.html" class="menu-item-button">
+                                <span class="material-icons">add_circle</span>
+                                Add Credits
+                            </a>
+                            <a href="test-credits.html" class="menu-item-button">
+                                <span class="material-icons">manage_accounts</span>
+                                Manage Credits
+                            </a>
+                        </div>
+                    </div>
+                    <div class="profile-divider"></div>
+                    <div class="profile-info">
+                        <div class="menu-item button-like" onclick="window.location.href='processing-history.html'">
+                            <span class="material-icons">history</span>
+                            <span>Processing History</span>
+                        </div>
+                        <div class="menu-item">
+                            <span class="material-icons">access_time</span>
+                            <span id="last-login"></span>
+                        </div>
+                    </div>
+                    <div class="profile-divider"></div>
+                    <div class="menu-item sign-out" onclick="signOut()">
+                        <span class="material-icons">logout</span>
+                        Sign Out
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="purchase-container">
+        <div class="credit-packages">
+            <div class="package-card" data-credits="100" data-price="10">
+                <div class="package-credits">100</div>
+                <div class="package-label">Credits</div>
+                <div class="package-price">$10</div>
+                <div class="package-details">Best for starting out</div>
+            </div>
+            <div class="package-card" data-credits="500" data-price="45">
+                <div class="package-credits">500</div>
+                <div class="package-label">Credits</div>
+                <div class="package-price">$45</div>
+                <div class="package-details">Most popular</div>
+            </div>
+            <div class="package-card" data-credits="1000" data-price="80">
+                <div class="package-credits">1000</div>
+                <div class="package-label">Credits</div>
+                <div class="package-price">$80</div>
+                <div class="package-details">Best value</div>
+            </div>
+        </div>
+
+        <form id="payment-form">
+            <div id="card-element"></div>
+            <button type="submit" class="purchase-btn" disabled>
+                Select a package to purchase
+            </button>
+            <div id="payment-message"></div>
+        </form>
+    </main>
+
+    <script>
+        // Your Stripe public key
+        const stripe = Stripe('YOUR_STRIPE_PUBLIC_KEY');
+        let selectedPackage = null;
+        let elements;
+
+        // Initialize Stripe Elements
+        function initializeStripe() {
+            elements = stripe.elements();
+            const card = elements.create('card');
+            card.mount('#card-element');
+
+            // Handle validation errors
+            card.addEventListener('change', function (event) {
+                const displayError = document.getElementById('payment-message');
+                if (event.error) {
+                    displayError.textContent = event.error.message;
+                    displayError.classList.add('error-message');
+                } else {
+                    displayError.textContent = '';
+                }
+            });
+        }
+
+        // Handle package selection
+        document.querySelectorAll('.package-card').forEach(card => {
+            card.addEventListener('click', () => {
+                // Remove previous selection
+                document.querySelectorAll('.package-card').forEach(c =>
+                    c.classList.remove('selected'));
+
+                // Add new selection
+                card.classList.add('selected');
+                selectedPackage = {
+                    credits: parseInt(card.dataset.credits),
+                    price: parseFloat(card.dataset.price)
+                };
+
+                // Update button text
+                const button = document.querySelector('.purchase-btn');
+                button.textContent = `Purchase ${selectedPackage.credits} Credits for $${selectedPackage.price}`;
+                button.disabled = false;
+            });
+        });
+
+        // Handle form submission
+        document.getElementById('payment-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            if (!selectedPackage) return;
+
+            const button = e.target.querySelector('button');
+            button.disabled = true;
+            button.textContent = 'Processing...';
+
+            try {
+                // Create payment intent on your server
+                const response = await fetch('/create-payment-intent', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        amount: selectedPackage.price * 100, // Convert to cents
+                        credits: selectedPackage.credits
+                    })
+                });
+
+                const data = await response.json();
+
+                // Confirm payment with Stripe
+                const { error, paymentIntent } = await stripe.confirmCardPayment(
+                    data.clientSecret, {
+                    payment_method: {
+                        card: elements.getElement('card'),
+                    }
+                }
+                );
+
+                if (error) {
+                    throw error;
+                }
+
+                // Add credits to user's account
+                const creditsManager = new CreditsManager(auth.currentUser.uid);
+                await creditsManager.addCredits(selectedPackage.credits, paymentIntent.id);
+
+                // Show success message
+                const messageElement = document.getElementById('payment-message');
+                messageElement.textContent = `Successfully purchased ${selectedPackage.credits} credits!`;
+                messageElement.classList.remove('error-message');
+                messageElement.classList.add('success-message');
+
+                // Reset form
+                button.textContent = 'Purchase successful!';
+                setTimeout(() => {
+                    window.location.href = 'index.html';
+                }, 2000);
+
+            } catch (error) {
+                const messageElement = document.getElementById('payment-message');
+                messageElement.textContent = error.message;
+                messageElement.classList.add('error-message');
+                button.disabled = false;
+                button.textContent = `Purchase ${selectedPackage.credits} Credits for $${selectedPackage.price}`;
+            }
+        });
+
+        // Initialize on page load
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                initializeStripe();
+            } else {
+                window.location.href = 'index.html';
+            }
+        });
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,58 @@
+name: Auto Version Bump
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  bump-version:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      
+      - name: Bump version
+        run: |
+          # Read current version
+          CURRENT_VERSION=$(jq -r '.version' version.json)
+          echo "Current version: $CURRENT_VERSION"
+          
+          # Split version into parts
+          IFS='.' read -ra VERSION_PARTS <<< "$CURRENT_VERSION"
+          MAJOR="${VERSION_PARTS[0]}"
+          MINOR="${VERSION_PARTS[1]}"
+          PATCH="${VERSION_PARTS[2]}"
+          
+          # Increment patch version
+          PATCH=$((PATCH + 1))
+          NEW_VERSION="$MAJOR.$MINOR.$PATCH"
+          echo "New version: $NEW_VERSION"
+          
+          # Get current date
+          CURRENT_DATE=$(date +%Y-%m-%d)
+          
+          # Update version.json
+          jq --arg version "$NEW_VERSION" --arg date "$CURRENT_DATE" \
+            '.version = $version | .updated = $date' \
+            version.json > version.json.tmp
+          mv version.json.tmp version.json
+          
+          echo "VERSION=$NEW_VERSION" >> $GITHUB_ENV
+      
+      - name: Commit version bump
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add version.json
+          git commit -m "chore: bump version to ${{ env.VERSION }}" || echo "No changes to commit"
+          git push || echo "No changes to push"

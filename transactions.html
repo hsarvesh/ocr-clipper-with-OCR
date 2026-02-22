@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cross-Origin-Opener-Policy" content="same-origin-allow-popups">
+    <title>Transaction History - OCR System</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+    <link rel="stylesheet" href="src/css/styles.css">
+    <link rel="stylesheet" href="src/css/credits-styles.css">
+
+    <script src="src/js/auth.js" defer></script>
+    <script src="src/js/credits.js" defer></script>
+
+    <style>
+        /* Pagination Styles */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 2rem;
+            padding: 1rem;
+        }
+
+        .pagination-button {
+            padding: 0.5rem 1rem;
+            background-color: white;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            color: var(--text);
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+
+        .pagination-button:hover:not(:disabled) {
+            background-color: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        .pagination-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .pagination-button.active {
+            background-color: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        .pagination-info {
+            color: #64748b;
+            font-size: 0.875rem;
+            margin: 0 1rem;
+        }
+    </style>
+</head>
+
+<body>
+    <header class="header">
+        <div class="header-left">
+            <h1 class="page-title">Transaction History</h1>
+        </div>
+        <div class="header-right">
+            <div class="user-profile">
+                <button id="user-name" class="profile-button" onclick="toggleProfileMenu(event)">
+                    <img id="user-photo" class="user-photo" src="" alt="Profile photo">
+                    <span id="user-display-name"></span>
+                    <span class="material-icons">arrow_drop_down</span>
+                </button>
+                <div id="profile-menu" class="profile-menu">
+                    <div class="profile-header">
+                        <div class="profile-name" id="profile-full-name"></div>
+                        <div class="profile-email" id="profile-email"></div>
+                    </div>
+                    <div class="credits-section">
+                        <div class="credits-info">
+                            <span class="credits-icon">💎</span>
+                            <span class="credits-amount-lg" id="menu-credits-amount">-</span>
+                            <span class="credits-label">Credits Available</span>
+                        </div>
+                        <div class="credits-actions">
+                            <a href="test-credits.html" class="menu-item-button">
+                                <span class="material-icons">add_circle</span>
+                                Add Credits
+                            </a>
+                            <a href="test-credits.html" class="menu-item-button">
+                                <span class="material-icons">manage_accounts</span>
+                                Manage Credits
+                            </a>
+                        </div>
+                    </div>
+                    <div class="profile-divider"></div>
+                    <div class="profile-info">
+                        <div class="menu-item button-like" onclick="window.location.href='processing-history.html'">
+                            <span class="material-icons">history</span>
+                            <span>Processing History</span>
+                        </div>
+                        <div class="menu-item">
+                            <span class="material-icons">access_time</span>
+                            <span id="last-login"></span>
+                        </div>
+                    </div>
+                    <div class="profile-divider"></div>
+                    <div class="menu-item sign-out" onclick="signOut()">
+                        <span class="material-icons">logout</span>
+                        Sign Out
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="transactions-container">
+        <table class="transactions-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Type</th>
+                    <th>Description</th>
+                    <th>Credits</th>
+                </tr>
+            </thead>
+            <tbody id="transactions-body">
+                <tr>
+                    <td colspan="4" class="empty-state">Loading transactions...</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div id="pagination-container" class="pagination" style="display: none;">
+            <button class="pagination-button" id="prev-page" onclick="changePage(-1)">
+                <span class="material-icons" style="font-size: 1rem;">chevron_left</span>
+                Previous
+            </button>
+            <div id="page-numbers"></div>
+            <span class="pagination-info" id="pagination-info"></span>
+            <button class="pagination-button" id="next-page" onclick="changePage(1)">
+                Next
+                <span class="material-icons" style="font-size: 1rem;">chevron_right</span>
+            </button>
+        </div>
+    </main>
+
+    <script>
+        // Pagination variables
+        let allTransactions = [];
+        let currentPage = 1;
+        const itemsPerPage = 10;
+
+        // Initialize transaction history
+        auth.onAuthStateChanged(async (user) => {
+            if (user) {
+                const creditsManager = new CreditsManager(user.uid);
+                await loadTransactionHistory(creditsManager);
+            } else {
+                window.location.href = 'index.html';
+            }
+        });
+
+        async function loadTransactionHistory(creditsManager) {
+            const transactions = await creditsManager.getTransactionHistory();
+            allTransactions = transactions;
+
+            const tbody = document.getElementById('transactions-body');
+
+            if (transactions.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="4" class="empty-state">No transactions found</td>
+                    </tr>
+                `;
+                return;
+            }
+
+            // Show pagination if there are more than itemsPerPage transactions
+            if (transactions.length > itemsPerPage) {
+                document.getElementById('pagination-container').style.display = 'flex';
+            }
+
+            renderPage();
+        }
+
+        function renderPage() {
+            const tbody = document.getElementById('transactions-body');
+            const totalPages = Math.ceil(allTransactions.length / itemsPerPage);
+
+            // Calculate start and end indices
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const endIndex = Math.min(startIndex + itemsPerPage, allTransactions.length);
+
+            // Get transactions for current page
+            const pageTransactions = allTransactions.slice(startIndex, endIndex);
+
+            // Render transactions
+            tbody.innerHTML = pageTransactions.map(transaction => `
+                <tr>
+                    <td>${new Date(transaction.timestamp).toLocaleString()}</td>
+                    <td>
+                        <span class="transaction-type ${transaction.type}">
+                            ${transaction.type.charAt(0).toUpperCase() + transaction.type.slice(1)}
+                        </span>
+                    </td>
+                    <td>${transaction.description}</td>
+                    <td>${transaction.type === 'purchase' ? '+' : '-'}${transaction.credits}</td>
+                </tr>
+            `).join('');
+
+            // Update pagination controls
+            updatePaginationControls(totalPages, startIndex, endIndex);
+        }
+
+        function updatePaginationControls(totalPages, startIndex, endIndex) {
+            // Update previous button
+            const prevButton = document.getElementById('prev-page');
+            prevButton.disabled = currentPage === 1;
+
+            // Update next button
+            const nextButton = document.getElementById('next-page');
+            nextButton.disabled = currentPage === totalPages;
+
+            // Update page numbers
+            const pageNumbersContainer = document.getElementById('page-numbers');
+            pageNumbersContainer.innerHTML = '';
+
+            // Show max 5 page numbers
+            let startPage = Math.max(1, currentPage - 2);
+            let endPage = Math.min(totalPages, startPage + 4);
+
+            // Adjust if we're near the end
+            if (endPage - startPage < 4) {
+                startPage = Math.max(1, endPage - 4);
+            }
+
+            for (let i = startPage; i <= endPage; i++) {
+                const pageButton = document.createElement('button');
+                pageButton.className = 'pagination-button' + (i === currentPage ? ' active' : '');
+                pageButton.textContent = i;
+                pageButton.onclick = () => goToPage(i);
+                pageNumbersContainer.appendChild(pageButton);
+            }
+
+            // Update info text
+            const paginationInfo = document.getElementById('pagination-info');
+            paginationInfo.textContent = `Showing ${startIndex + 1}-${endIndex} of ${allTransactions.length}`;
+        }
+
+        function changePage(delta) {
+            const totalPages = Math.ceil(allTransactions.length / itemsPerPage);
+            const newPage = currentPage + delta;
+
+            if (newPage >= 1 && newPage <= totalPages) {
+                currentPage = newPage;
+                renderPage();
+            }
+        }
+
+        function goToPage(page) {
+            currentPage = page;
+            renderPage();
+        }
+    </script>
+</body>
+
+</html>
