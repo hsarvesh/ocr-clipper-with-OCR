@@ -96,7 +96,7 @@ const OCRService = {
             try {
                 // Create fresh FormData for each attempt (streams can't be reused)
                 const formData = new FormData();
-                formData.append('image', blob, 'clip.png');
+                formData.append('image', blob, 'clip.jpg');
 
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => {

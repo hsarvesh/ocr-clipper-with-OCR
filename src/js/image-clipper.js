@@ -142,8 +142,8 @@ const ImageClipper = {
 
         // Get cropped canvas
         const canvas = this.cropper.getCroppedCanvas({
-            maxWidth: 4096,
-            maxHeight: 4096,
+            maxWidth: 2048,
+            maxHeight: 2048,
             imageSmoothingEnabled: true,
             imageSmoothingQuality: 'high',
         });
@@ -157,7 +157,7 @@ const ImageClipper = {
         canvas.toBlob((blob) => {
             if (!blob) return;
 
-            const dataUrl = canvas.toDataURL('image/png');
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
             const clipCount = PreviewQueue.getClipsFromSource(sourceFile.name).length + 1;
 
             const clip = {
@@ -179,7 +179,7 @@ const ImageClipper = {
             if (immediateToggle && immediateToggle.checked) {
                 OCRService.processClip(clip);
             }
-        }, 'image/png', 1);
+        }, 'image/jpeg', 0.85);
     },
 
     reset() {
