@@ -69,12 +69,51 @@ const ImageLoader = {
             // Skip duplicate filenames
             if (this.files.find(f => f.name === file.name && f.file.size === file.size)) continue;
 
-            const dataUrl = await this.readAsDataUrl(file);
-            this.files.push({ file, dataUrl, name: file.name });
-        }
+            try {
+                // Convert to JPEG & Get Data URL (to optimize memory and speed)
+                const dataUrl = await this.compressImage(file);
+                this.files.push({ file, dataUrl, name: file.name });
 
-        this.renderFileList();
-        this.updateNextButton();
+                // Update UI as we go
+                this.updateNextButton();
+                this.renderFileList();
+            } catch (err) {
+                console.error('Error processing image:', file.name, err);
+            }
+        }
+    },
+
+    compressImage(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+
+                    // Optimize size: Max dimension 2048
+                    const maxDim = 2048;
+                    let { width, height } = img;
+                    if (width > maxDim || height > maxDim) {
+                        const ratio = Math.min(maxDim / width, maxDim / height);
+                        width *= ratio;
+                        height *= ratio;
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    // Convert to JPEG (0.8 quality) - fixes PNG high size issue
+                    resolve(canvas.toDataURL('image/jpeg', 0.8));
+                };
+                img.onerror = () => reject(new Error('Failed to load image for compression'));
+                img.src = e.target.result;
+            };
+            reader.onerror = () => reject(new Error('Failed to read file for compression'));
+            reader.readAsDataURL(file);
+        });
     },
 
     readAsDataUrl(file) {
@@ -116,7 +155,15 @@ const ImageLoader = {
 
     updateNextButton() {
         if (this.nextBtn) {
-            this.nextBtn.disabled = this.files.length === 0;
+            const hasFiles = this.files.length > 0;
+            this.nextBtn.disabled = !hasFiles;
+
+            // Add a visual indicator if disabled
+            if (this.nextBtn.disabled) {
+                this.nextBtn.classList.add('disabled');
+            } else {
+                this.nextBtn.classList.remove('disabled');
+            }
         }
     },
 

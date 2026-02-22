@@ -5,19 +5,14 @@ const OCRService = {
     BASE_DELAY: 2000,
     isProcessing: false,
 
-    getImageType() {
-        return '1column';
-    },
-
     // Process a single clip (used in immediate mode)
     async processClip(clip) {
         if (clip.status === 'done') return;
 
-        const imageType = this.getImageType();
         PreviewQueue.updateClipStatus(clip.id, 'processing');
 
         try {
-            const text = await this.makeAPICall(clip.blob, imageType);
+            const text = await this.makeAPICall(clip.blob);
             clip.text = text;
             clip.status = 'done';
             PreviewQueue.updateClipStatus(clip.id, 'done');
@@ -40,7 +35,6 @@ const OCRService = {
         const clips = PreviewQueue.getClips();
         const pendingClips = clips.filter(c => c.status === 'pending' || c.status === 'error');
         const total = pendingClips.length;
-        const imageType = this.getImageType();
 
         let processed = 0;
         let successCount = 0;
@@ -62,7 +56,7 @@ const OCRService = {
             this.addProgressItem(clip.label, 'pending', 'Processing...');
 
             try {
-                const text = await this.makeAPICall(clip.blob, imageType);
+                const text = await this.makeAPICall(clip.blob);
                 clip.text = text;
                 clip.status = 'done';
 
@@ -90,7 +84,7 @@ const OCRService = {
         return { total, successCount, failedCount: total - successCount };
     },
 
-    async makeAPICall(blob, imageType, retries = this.RETRIES) {
+    async makeAPICall(blob, retries = this.RETRIES) {
         for (let i = 0; i < retries; i++) {
             try {
                 // Create fresh FormData for each attempt (streams can't be reused)
@@ -103,7 +97,7 @@ const OCRService = {
                 }, this.TIMEOUT);
 
                 const response = await fetch(
-                    `${this.API_URL}?image_type=${imageType}`,
+                    this.API_URL,
                     {
                         method: 'POST',
                         body: formData,
@@ -111,7 +105,6 @@ const OCRService = {
                         headers: { 'Accept': 'text/plain' }
                     }
                 );
-
                 clearTimeout(timeoutId);
 
                 if (!response.ok) {

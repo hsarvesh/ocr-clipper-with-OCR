@@ -1,6 +1,6 @@
 // API Configuration
 const API_CONFIG = {
-    baseUrl: 'https://us-central1-focus-healer-276207.cloudfunctions.net/akshar_chintan',
+    baseUrl: 'https://asia-south1-akshar-bodh-drushti.cloudfunctions.net/akshar-chintan-v2',
     timeout: 30000,
     retries: 3,
     baseDelay: 2000
@@ -17,16 +17,16 @@ class APIError extends Error {
 
 // API service
 export const apiService = {
-    async processImage(formData, imageType) {
+    async processImage(formData) {
         for (let i = 0; i < API_CONFIG.retries; i++) {
             try {
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.timeout);
 
                 const response = await fetch(
-                    `${API_CONFIG.baseUrl}?image_type=${imageType}`,
-                    { 
-                        method: 'POST', 
+                    API_CONFIG.baseUrl,
+                    {
+                        method: 'POST',
                         body: formData,
                         signal: controller.signal,
                         headers: {
