@@ -1,6 +1,6 @@
 // API Configuration
 const API_CONFIG = {
-    baseUrl: 'https://asia-south1-akshar-bodh-drushti.cloudfunctions.net/akshar-chintan-v2',
+    baseUrl: 'https://asia-south1-akshar-bodh-drushti.cloudfunctions.net/akshar-chintan-v3',
     timeout: 30000,
     retries: 3,
     baseDelay: 2000

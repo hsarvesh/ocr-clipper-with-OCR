@@ -1,5 +1,5 @@
 const OCRService = {
-    API_URL: 'https://asia-south1-akshar-bodh-drushti.cloudfunctions.net/akshar-chintan-v2',
+    API_URL: 'https://asia-south1-akshar-bodh-drushti.cloudfunctions.net/akshar-chintan-v3',
     TIMEOUT: 120000,
     RETRIES: 3,
     BASE_DELAY: 2000,
