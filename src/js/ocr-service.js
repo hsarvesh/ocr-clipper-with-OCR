@@ -6,8 +6,7 @@ const OCRService = {
     isProcessing: false,
 
     getImageType() {
-        const radio = document.querySelector('input[name="imageType"]:checked');
-        return radio ? radio.value : '1column';
+        return '1column';
     },
 
     // Process a single clip (used in immediate mode)

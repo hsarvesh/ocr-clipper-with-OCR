@@ -107,22 +107,18 @@
         <div class="stepper" id="stepper">
             <div class="step active" data-step="1">
                 <div class="step-number">1</div>
-                <div class="step-title">Select Layout</div>
+                <div class="step-title">Upload Images</div>
             </div>
             <div class="step" data-step="2">
                 <div class="step-number">2</div>
-                <div class="step-title">Upload Images</div>
+                <div class="step-title">Clip & Queue</div>
             </div>
             <div class="step" data-step="3">
                 <div class="step-number">3</div>
-                <div class="step-title">Clip & Queue</div>
+                <div class="step-title">Processing</div>
             </div>
             <div class="step" data-step="4">
                 <div class="step-number">4</div>
-                <div class="step-title">Processing</div>
-            </div>
-            <div class="step" data-step="5">
-                <div class="step-number">5</div>
                 <div class="step-title">Results</div>
             </div>
         </div>
@@ -130,44 +126,8 @@
         <!-- Main Content Area -->
         <main class="main-content">
 
-            <!-- ========== STEP 1: SELECT LAYOUT ========== -->
+            <!-- ========== STEP 1: UPLOAD IMAGES ========== -->
             <section class="screen" id="screen1" data-screen="1">
-                <div class="card">
-                    <h2 class="card-title">Select Document Layout</h2>
-                    <p class="card-subtitle">Choose the layout type that matches your document for optimal OCR accuracy
-                    </p>
-                    <div id="imageTypeOptions" class="layout-options">
-                        <label class="radio-card">
-                            <input type="radio" name="imageType" value="1column" checked>
-                            <div class="radio-card-content">
-                                <div class="layout-icon one-col">
-                                    <span class="material-icons">article</span>
-                                </div>
-                                <h3>Single Column</h3>
-                                <span class="description">For documents with single column layout</span>
-                            </div>
-                        </label>
-                        <label class="radio-card">
-                            <input type="radio" name="imageType" value="2column">
-                            <div class="radio-card-content">
-                                <div class="layout-icon two-col">
-                                    <span class="material-icons">view_column</span>
-                                </div>
-                                <h3>Two Columns</h3>
-                                <span class="description">For documents with two column layout</span>
-                            </div>
-                        </label>
-                    </div>
-                    <div class="nav-buttons">
-                        <button class="btn btn-primary" id="step1Next">
-                            Next <span class="material-icons">arrow_forward</span>
-                        </button>
-                    </div>
-                </div>
-            </section>
-
-            <!-- ========== STEP 2: UPLOAD IMAGES ========== -->
-            <section class="screen hidden" id="screen2" data-screen="2">
                 <div class="card">
                     <h2 class="card-title">Upload Images</h2>
                     <p class="card-subtitle">Select one or more images to process with OCR</p>
@@ -187,18 +147,15 @@
                     </div>
                     <div class="file-list" id="fileList"></div>
                     <div class="nav-buttons">
-                        <button class="btn btn-secondary" id="step2Back">
-                            <span class="material-icons">arrow_back</span> Back
-                        </button>
-                        <button class="btn btn-primary" id="step2Next" disabled>
+                        <button class="btn btn-primary" id="step1Next" disabled>
                             Next <span class="material-icons">arrow_forward</span>
                         </button>
                     </div>
                 </div>
             </section>
 
-            <!-- ========== STEP 3: CLIP & QUEUE ========== -->
-            <section class="screen hidden" id="screen3" data-screen="3">
+            <!-- ========== STEP 2: CLIP & QUEUE ========== -->
+            <section class="screen hidden" id="screen2" data-screen="2">
                 <div class="clip-header">
                     <h2 class="card-title">Clip & Queue</h2>
                     <div class="process-mode-toggle">
@@ -275,17 +232,17 @@
                 </div>
 
                 <div class="nav-buttons">
-                    <button class="btn btn-secondary" id="step3Back">
+                    <button class="btn btn-secondary" id="step2Back">
                         <span class="material-icons">arrow_back</span> Back
                     </button>
-                    <button class="btn btn-primary" id="step3Next" disabled>
+                    <button class="btn btn-primary" id="step2Next" disabled>
                         <span class="material-icons">play_arrow</span> Process All
                     </button>
                 </div>
             </section>
 
-            <!-- ========== STEP 4: PROCESSING ========== -->
-            <section class="screen hidden" id="screen4" data-screen="4">
+            <!-- ========== STEP 3: PROCESSING ========== -->
+            <section class="screen hidden" id="screen3" data-screen="3">
                 <div class="card processing-card">
                     <h2 class="card-title">Processing Images</h2>
                     <p class="card-subtitle" id="processingSubtitle">Sending clips to OCR engine...</p>
@@ -303,8 +260,8 @@
                 </div>
             </section>
 
-            <!-- ========== STEP 5: RESULTS ========== -->
-            <section class="screen hidden" id="screen5" data-screen="5">
+            <!-- ========== STEP 4: RESULTS ========== -->
+            <section class="screen hidden" id="screen4" data-screen="4">
                 <div class="results-header">
                     <h2 class="card-title">Results</h2>
                     <div class="results-actions">
@@ -322,7 +279,7 @@
                 </p>
                 <div class="results-list" id="resultsList"></div>
                 <div class="nav-buttons">
-                    <button class="btn btn-secondary" id="step5Back">
+                    <button class="btn btn-secondary" id="step4Back">
                         <span class="material-icons">arrow_back</span> Back to Clip
                     </button>
                     <button class="btn btn-secondary" id="downloadAllBottom">

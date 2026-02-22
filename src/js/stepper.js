@@ -1,7 +1,7 @@
 // Stepper — manages step navigation & indicators
 const Stepper = {
     currentStep: 1,
-    totalSteps: 5,
+    totalSteps: 4,
     highestStep: 1, // tracks the furthest step reached
     validators: {},
 

@@ -10,10 +10,9 @@ const App = {
         ResultsViewer.init();
 
         // Set up step validators
-        Stepper.setValidator(1, () => true); // Layout always valid
-        Stepper.setValidator(2, () => ImageLoader.getFiles().length > 0);
-        Stepper.setValidator(3, () => PreviewQueue.getCount() > 0);
-        Stepper.setValidator(4, () => PreviewQueue.getClips().some(c => c.status === 'done'));
+        Stepper.setValidator(1, () => ImageLoader.getFiles().length > 0);
+        Stepper.setValidator(2, () => PreviewQueue.getCount() > 0);
+        Stepper.setValidator(3, () => PreviewQueue.getClips().some(c => c.status === 'done'));
 
         this.bindNavigation();
         this.bindStepChanges();
@@ -23,26 +22,18 @@ const App = {
     bindNavigation() {
         // Step 1 → 2
         document.getElementById('step1Next')?.addEventListener('click', () => {
-            Stepper.goTo(2);
-        });
-
-        // Step 2: Back / Next
-        document.getElementById('step2Back')?.addEventListener('click', () => {
-            Stepper.goTo(1);
-        });
-        document.getElementById('step2Next')?.addEventListener('click', () => {
             if (ImageLoader.getFiles().length === 0) {
                 Toast.show('Please upload at least one image');
                 return;
             }
-            Stepper.goTo(3);
-        });
-
-        // Step 3: Back / Process All
-        document.getElementById('step3Back')?.addEventListener('click', () => {
             Stepper.goTo(2);
         });
-        document.getElementById('step3Next')?.addEventListener('click', () => {
+
+        // Step 2: Back / Process All
+        document.getElementById('step2Back')?.addEventListener('click', () => {
+            Stepper.goTo(1);
+        });
+        document.getElementById('step2Next')?.addEventListener('click', () => {
             if (PreviewQueue.getCount() === 0) {
                 Toast.show('Please add clips to the queue first');
                 return;
@@ -50,7 +41,7 @@ const App = {
             this.startBatchProcessing();
         });
 
-        // Step 5: Results actions
+        // Step 4: Results actions
         document.getElementById('downloadAll')?.addEventListener('click', () => {
             DownloadManager.downloadAll();
         });
@@ -63,8 +54,8 @@ const App = {
         document.getElementById('processMoreBottom')?.addEventListener('click', () => {
             this.resetAll();
         });
-        document.getElementById('step5Back')?.addEventListener('click', () => {
-            Stepper.goTo(3);
+        document.getElementById('step4Back')?.addEventListener('click', () => {
+            Stepper.goTo(2);
         });
     },
 
@@ -72,14 +63,14 @@ const App = {
         document.addEventListener('stepChanged', (e) => {
             const step = e.detail.step;
 
-            if (step === 3) {
+            if (step === 2) {
                 // Populate image list in clipper
                 ImageClipper.populateImageList(ImageLoader.getFiles());
                 // Update process button state
                 PreviewQueue.updateUI();
             }
 
-            if (step === 5) {
+            if (step === 4) {
                 // Render results
                 ResultsViewer.render();
             }
@@ -92,7 +83,7 @@ const App = {
             Toast.show('No pending clips to process');
             // Go directly to results if all clips are already processed
             if (PreviewQueue.getClips().some(c => c.status === 'done')) {
-                Stepper.goTo(5);
+                Stepper.goTo(4);
             }
             return;
         }
@@ -112,7 +103,7 @@ const App = {
         }
 
         // Move to processing step
-        Stepper.goTo(4);
+        Stepper.goTo(3);
 
         // Process all clips
         const result = await OCRService.processAll();
@@ -133,7 +124,7 @@ const App = {
 
         // Auto-advance to results after a short delay
         setTimeout(() => {
-            Stepper.goTo(5);
+            Stepper.goTo(4);
         }, 1200);
     },
 

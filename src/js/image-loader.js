@@ -12,7 +12,7 @@ const ImageLoader = {
         this.uploadArea = document.getElementById('uploadArea');
         this.fileInput = document.getElementById('imageInput');
         this.fileList = document.getElementById('fileList');
-        this.nextBtn = document.getElementById('step2Next');
+        this.nextBtn = document.getElementById('step1Next');
 
         if (this.fileInput) {
             this.fileInput.addEventListener('change', (e) => this.handleFileSelect(e));

@@ -13,7 +13,7 @@ const PreviewQueue = {
         this.emptyEl = document.getElementById('queueEmpty');
         this.countEl = document.getElementById('queueCount');
         this.clearBtn = document.getElementById('clearQueue');
-        this.processBtn = document.getElementById('step3Next');
+        this.processBtn = document.getElementById('step2Next');
 
         if (this.clearBtn) {
             this.clearBtn.addEventListener('click', () => this.clearAll());
