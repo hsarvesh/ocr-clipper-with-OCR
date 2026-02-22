@@ -141,7 +141,7 @@ const ResultsViewer = {
 
 // Listen for queue reorder events from PreviewQueue
 document.addEventListener('queueReordered', () => {
-    if (Stepper.currentStep === 5) {
+    if (Stepper.currentStep === 4) {
         ResultsViewer.render();
     }
 });
